@@ -1,0 +1,399 @@
+﻿@page "/"
+@using crm_Ilmhub.Models
+@using crm_Ilmhub.Interfaces
+@using crm_Ilmhub.Pages
+@using System.Text.RegularExpressions
+@using MudBlazor
+@inject IDialogService DialogService
+@inject ILeadService LeadService
+@inject ICourseService courseService
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="pa-3">
+    <MudStack Row="true" AlignItems="@AlignItems.Center" Spacing="1" Style="margin-top: -5px;">
+        <MudIconButton Size="Size.Large"
+                   Icon="@Icons.Material.Filled.PersonAdd"
+                   Color="Color.Tertiary"
+                   Class="ma-4"
+                   OnClick="OpenAddLeadDialog">
+        </MudIconButton>
+        <MudSpacer />
+        <MudSpacer />
+        <MudTextField T="string" ValueChanged="@(s => OnSearch(s))" Placeholder="Qidirish"
+            FullWidth="false"
+            Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+            IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        <MudGrid>
+            <MudItem class="mb-4">
+                <div class="w-200">
+                    <MudSelect T="Course" Label="Lead course" Clearable="true" Value="selectedCourse" ValueChanged="OnCourseSelected" Class="mr-2">
+                        @foreach (var course in courses)
+                        {
+                            <MudSelectItem T="Course" Value="course">
+                                <MudStack Row="true">
+                                    <MudIcon Icon="@Icons.Material.Filled.ChromeReaderMode" Color="Color.Primary" Class="ml-1" Size="Size.Small">
+                                    </MudIcon>
+                                    <MudText Typo="Typo.subtitle2">@course.Name</MudText>
+                                </MudStack>
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                </div>
+            </MudItem>
+            <MudItem class="mb-4">
+                <div class="w-200">
+                <MudSelect T="LeadSource?" Label="Lead source" Clearable="true" Value="selectedSource" ValueChanged="OnSourceSelected">
+                    @foreach (LeadSource column in Enum.GetValues(typeof(LeadSource)))
+                    {
+                        <MudSelectItem T="LeadSource?" Value="column">
+                            <MudStack Row="true">
+                                <MudIcon Icon="@GetIconForSource(column)" Class="ml-1" Color="Color.Primary" Size="Size.Small" />
+                                <MudText Typo="Typo.subtitle2">@column</MudText>
+                            </MudStack>
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudStack>
+
+    <div class="hide-scrollbar" style="overflow-x: auto; white-space: nowrap;">
+        <MudDropContainer T="Lead" @ref="dropContainer" Items="@filteredLeads" ItemsSelector="@((item,column) => GetColumnForStatus(item.Status) == column)" ItemDropped="LeadUpdated" Class="d-flex flex-wrap flex-grow-1" @key="filteredLeads.Count">
+            <ChildContent>
+            @foreach (var column in new[] { "Yangi Lidlar", "Bog'lanilgan", "Kuzatuvda", "Yakuniy Holat" })
+            {
+                <MudPaper  Elevation="0" Style="height: calc(100vh - 175px); flex: 1; display: flex; flex-direction: column; min-width: 200px; max-width: 400px; margin-bottom: 8px;" Class="mx-1 transparent mud-background-gray rounded-lg">
+                    <MudList T="Lead" Style="flex-grow: 1; overflow-y: auto;"
+                        Class="d-flex flex-column mud-height-full">
+                        <div style="display: flex; justify-content: space-between; padding: 8px;">
+                            <MudText Class="ma-2 mt-2" Typo="Typo.h6" Align="Align.Left" Style="@($"color: {GetColorForColumn(column)};")">@column</MudText>
+                            <MudSpacer/>
+                            <MudMenu Icon="@Icons.Material.Rounded.MoreVert" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" ListClass="pa-2 d-flex flex-column mud-background-gray" PopoverClass="mud-elevation-1">
+                                <MudButton Size="Size.Small" Color="Color.Default" OnClick="@(() => ToggleSort(column))" StartIcon="@Icons.Material.Filled.FilterList">
+                                    Sort @((!columnSortDirections.ContainsKey(column) || columnSortDirections[column] == SortDirection.Descending) ? "↑" : "↓")
+                                </MudButton>
+                                <MudButton Size="Size.Small" Color="Color.Info" StartIcon="@Icons.Material.Filled.RemoveRedEye" @onclick="ToggleHiddenLeads">@(showingHiddenLeads ? "All leads" : "Invisible leads")</MudButton>
+                            </MudMenu>
+                        </div>
+                        <MudDropZone T="Lead" Identifier="@column" Class="flex-grow-1 overflow-y-auto hide-scrollbar" AllowReorder="true"/>
+                    </MudList>  
+                </MudPaper>
+            }
+            </ChildContent>
+            <ItemRenderer>
+                <MudCard Outlined="true" Class="ma-1 my-2 p-0 rounded-lg" Elevation="5" @onclick="() => ShowLeadDetails(context)">
+                    <MudCardContent Style="width: 100%; overflow: auto;">
+                        <MudStack Row="true" AlignItems="@AlignItems.Center" Justify="Justify.SpaceBetween" Class="mt-n2">
+                            <MudMenu MaxHeight="200" Style="margin-left: -15px; margin-top: -3px">
+                                <ActivatorContent>
+                                    <MudChip T="string" Variant="Variant.Text" Color="@GetColorForStatus(context.Status)" Size="Size.Small" Style="margin: 0 4px; cursor: pointer;">@context.Status</MudChip>
+                                </ActivatorContent>
+                                <ChildContent>
+                                    @foreach (LeadStatus status in Enum.GetValues(typeof(LeadStatus)))
+                                    {
+                                        <MudMenuItem OnClick="@(() => UpdateLeadStatus(context, status))">@status</MudMenuItem>
+                                    }
+                                </ChildContent>
+                            </MudMenu>
+                            <MudText Typo="Typo.body2">@(context.Name?.Substring(0, Math.Min(context.Name?.Length ?? 0, 20)))</MudText>
+                        </MudStack>
+                        <MudStack>
+                            <MudStack Row="true" Class="mt-2" Justify="@Justify.FlexStart" AlignItems="@AlignItems.Center">
+                                <MudIcon Color="Color.Info" Style="font-size: medium;" Icon="@Icons.Material.Rounded.LocalPhone" />
+                                <MudText Typo="Typo.body2">@FormatPhoneNumber(context.Phone)</MudText>
+                                <MudSpacer />
+                                <MudText Color="Color.Tertiary" Typo="Typo.body2">@(context.ModifiedAt?.ToString("dd MMM yyyy HH:mm") ?? context.CreatedAt.ToString("dd MMM yyyy HH:mm"))</MudText> 
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard> 
+            </ItemRenderer>
+        </MudDropContainer>
+    </div>
+</MudContainer>
+
+@code {
+    private MudDropContainer<Lead> dropContainer = default!;
+    private List<Lead> leads = new();
+    private List<Course> courses = new();
+    private string searchQuery = "";
+    private List<Lead> filteredLeads = new();
+    private readonly Dictionary<string, SortDirection> columnSortDirections = [];
+    private readonly Dictionary<string, List<Lead>> columnLeads = [];
+    private Course? selectedCourse;
+    private LeadSource? selectedSource;
+    private List<Lead> hiddenLeads = new();
+    private bool showingHiddenLeads = false;
+    private DateRange dateRange { get; set; } = new DateRange(DateTime.Now.AddDays(-7), DateTime.Now);
+    [CascadingParameter]
+    private MudDialogInstance? MudDialog { get; set; } 
+    private void Cancel()
+    {
+        if (MudDialog != null)
+        {
+            MudDialog.Cancel();
+        }
+    }
+    private Dictionary<int, bool> leadDetailsVisibility = new Dictionary<int, bool>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        leads = (await LeadService.GetLeadsAsync()).OrderByDescending(l => l.ModifiedAt).ToList();
+        filteredLeads = leads.Where(l => !l.IsHidden).ToList();
+        courses = (await courseService.GetCoursesAsync()).ToList();
+        var columns = new[] { "Yangi Lidlar", "Bog'lanilgan", "Kuzatuvda", "Yakuniy Holat" };
+        foreach (var column in columns)
+        {
+            columnLeads[column] = [.. leads.Where(l => GetColumnForStatus(l.Status) == column)];
+        }
+    }
+
+    private static IEnumerable<Lead> SortLeads(IEnumerable<Lead> leads, string sortLabel, SortDirection direction)
+    {
+        if (string.IsNullOrEmpty(sortLabel))
+            return leads;
+
+        return sortLabel switch
+        {
+            "ModifiedAt" => direction == SortDirection.Ascending
+                ? leads.OrderBy(l => l.ModifiedAt ?? l.CreatedAt)
+                : leads.OrderByDescending(l => l.ModifiedAt ?? l.CreatedAt),
+            _ => leads
+        };
+    }
+
+    private void OpenAddLeadDialog()
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("OnAdd", EventCallback.Factory.Create<Lead>(this, AddNewLead));
+        DialogService.Show<AddNewLeadDialog>("Add new Lead", parameters);
+    }
+
+    private void AddNewLead(Lead newLead)
+    {
+        newLead.ModifiedAt = DateTime.Now;
+        leads.Insert(0, newLead);
+        FilterLeads();
+    }
+
+    private void ShowLeadDetails(Lead lead)
+    {
+        DialogService.Show<LeadDetailsDialog>("Lead Details", new DialogParameters { ["Lead"] = lead });
+    }
+
+    private async Task ToggleHiddenLeads()
+    {
+        showingHiddenLeads = !showingHiddenLeads;
+        if (showingHiddenLeads)
+        {
+            hiddenLeads = await LeadService.GetHiddenLeadsAsync();
+            filteredLeads = hiddenLeads;
+        }
+        else
+        {
+            filteredLeads = leads.Where(l => !l.IsHidden).ToList();
+        }
+        FilterLeads();
+        dropContainer.Refresh();
+    }
+
+    private void FilterLeads()
+    {
+        var leadsToFilter = showingHiddenLeads ? hiddenLeads : leads.Where(l => !l.IsHidden).ToList();
+
+        if (!string.IsNullOrEmpty(searchQuery))
+        {
+            leadsToFilter = leadsToFilter.Where(l => l.Name!.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        if (selectedSource.HasValue)
+        {
+            leadsToFilter = leadsToFilter.Where(l => l.Source == selectedSource.Value).ToList();
+        }
+
+        if (selectedCourse != null)
+        {
+            leadsToFilter = leadsToFilter.Where(l => l.InterestedCourse?.Id == selectedCourse.Id).ToList();
+        }
+
+
+        if (dateRange.Start.HasValue && dateRange.End.HasValue)
+        {
+            filteredLeads=leadsToFilter.Where(lead => lead.CreatedAt >= dateRange.Start && lead.CreatedAt <= dateRange.End)
+                .ToList();
+        }
+
+
+        filteredLeads = leadsToFilter;
+        StateHasChanged();
+    }
+
+    private void OnSearch(string text)
+    {
+        searchQuery = text.Trim();
+        var updatedLeads = leads.Where(l => (l.Name?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) == true ||
+            l.Phone?.Contains(searchQuery) == true)
+            ).ToList();
+        filteredLeads.Clear();
+        filteredLeads.AddRange(updatedLeads);
+    }
+
+    private async Task LeadUpdated(MudItemDropInfo<Lead> dropInfo)
+    {
+        if (dropInfo.Item != null)
+        {
+            dropInfo.Item.Status = GetStatusForColumn(dropInfo.DropzoneIdentifier);
+            dropInfo.Item.ModifiedAt = DateTime.Now;
+
+            await LeadService.UpdateLeadAsync(dropInfo.Item);
+            leads = leads.OrderByDescending(l => l.ModifiedAt).ToList();
+
+            var currentFiltered = filteredLeads.ToList();
+            filteredLeads = currentFiltered.OrderByDescending(l => l.ModifiedAt).ToList();
+
+            StateHasChanged();
+            dropContainer.Refresh();
+        }
+    }
+
+    private async Task UpdateLeadStatus(Lead lead, LeadStatus newStatus)
+    {
+        lead.Status = newStatus;
+        lead.ModifiedAt = DateTime.Now;
+        await LeadService.UpdateLeadAsync(lead);
+        leads = leads.OrderByDescending(l => l.ModifiedAt).ToList();
+        StateHasChanged();
+    }
+
+    private string GetColumnForStatus(LeadStatus status)
+    {
+        return status switch
+        {
+            LeadStatus.New => "Yangi Lidlar",
+            LeadStatus.Phone or LeadStatus.Contacted => "Bog'lanilgan",
+            LeadStatus.Recontact or LeadStatus.Incomplete or LeadStatus.Registered or LeadStatus.AttendedTrialLesson => "Kuzatuvda",
+            LeadStatus.Acquired or LeadStatus.NotAcquired or LeadStatus.Lost => "Yakuniy Holat",
+            _ => "Yangi Lidlar"
+        };
+    }
+
+    private LeadStatus GetStatusForColumn(string column)
+    {
+        return column switch
+        {
+            "Yangi Lidlar" => LeadStatus.New,
+            "Bog'lanilgan" => LeadStatus.Contacted,
+            "Kuzatuvda" => LeadStatus.Recontact,
+            "Yakuniy Holat" => LeadStatus.Acquired,
+            _ => LeadStatus.New
+        };
+    }
+
+    private string GetColorForColumn(string column)
+    {
+        return column switch
+        {
+            "Yangi Lidlar" => "dodgerblue",
+            "Bog'lanilgan" => "orange",
+            "Kuzatuvda" => "mediumvioletred",
+            "Yakuniy Holat" => "seagreen",
+            _ => "Yangi Lidlar"
+        };
+    }
+
+    private string GetIconForSource(LeadSource source)
+    {
+        return source switch
+        {
+            LeadSource.Telegram => Icons.Custom.Brands.Telegram,
+            LeadSource.Instagram => Icons.Custom.Brands.Instagram,
+            LeadSource.Referral => Icons.Material.Rounded.PeopleAlt,
+            _ => Icons.Material.Filled.Help
+        };
+    }
+
+    private Color GetColorForStatus(LeadStatus status)
+    {
+        return status switch
+        {
+            LeadStatus.New => Color.Info,
+            LeadStatus.Phone => Color.Warning,
+            LeadStatus.Contacted => Color.Primary,
+            LeadStatus.Recontact => Color.Secondary,
+            LeadStatus.Incomplete => Color.Error,
+            LeadStatus.Registered => Color.Success,
+            LeadStatus.AttendedTrialLesson => Color.Tertiary,
+            LeadStatus.Acquired => Color.Success,
+            LeadStatus.NotAcquired => Color.Error,
+            LeadStatus.Lost => Color.Dark,
+            _ => Color.Default
+        };
+    }
+
+    public static string FormatPhoneNumber(string? input)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return string.Empty;
+        }
+
+        var regex = new Regex(@"(\d{2})[\s\-]?(\d{3})[\s\-]?(\d{4})");
+        var result = regex.Replace(input, "$1 $2 $3");
+
+        if (result == input)
+        {
+            return input;
+        }
+
+        return result;
+    }
+
+    private void OnSourceSelected(LeadSource? value)
+    {
+        selectedSource = value;
+        FilterLeads();
+    }
+
+    private void OnCourseSelected(Course? value)
+    {
+        selectedCourse = value;
+        FilterLeads();
+    }
+
+    private void ClearSourceFilter()
+    {
+        selectedSource = null;
+        FilterLeads();
+    }
+
+    private void ClearCourseFilter()
+    {
+        selectedCourse = null;
+        FilterLeads();
+    }
+
+    private void ToggleSort(string column)
+    {
+        if (!columnSortDirections.ContainsKey(column))
+        {
+            columnSortDirections[column] = SortDirection.Ascending;
+        }
+        else
+        {
+            columnSortDirections[column] = columnSortDirections[column] == SortDirection.Ascending 
+                ? SortDirection.Descending 
+                : SortDirection.Ascending;
+        }
+
+        var columnLeads = leads.Where(l => GetColumnForStatus(l.Status) == column).ToList();
+        var sortedColumnLeads = SortLeads(columnLeads, "ModifiedAt", columnSortDirections[column]);
+        
+        var otherLeads = leads.Where(l => GetColumnForStatus(l.Status) != column).ToList();
+        leads = [.. otherLeads, .. sortedColumnLeads];
+        
+        filteredLeads = [.. leads];
+        
+        StateHasChanged();
+        dropContainer.Refresh();
+    }
+}

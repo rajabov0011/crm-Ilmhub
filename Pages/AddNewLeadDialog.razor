@@ -1,0 +1,116 @@
+@page "/add-new-lead"
+@using crm_Ilmhub.Interfaces
+@using crm_Ilmhub.Models
+@using MudBlazor
+@using System.Text.RegularExpressions
+@inject ICourseService courseService
+
+<MudSnackbarProvider snackbarLocation="top-right" />
+
+<MudDialog style="width: 500px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Yangi Lead Yaratish</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors" Class="ma-2">
+            <MudStack Spacing="1">
+                <MudStack Row="true" Justify="@Justify.Center" AlignItems="@AlignItems.Center" StretchItems="@StretchItems.Middle">
+                    <MudIcon Icon="@Icons.Material.Filled.LibraryBooks" Size="Size.Large" Color="Color.Primary" Class="ma-3"></MudIcon>
+                    <MudSelect T="Course" Label="Course" Required="true" @bind-Value="newLead.InterestedCourse">
+                        @if (courses != null)
+                        {
+                            @foreach (var course in courses)
+                            {
+                                <MudSelectItem T="Course" Value="course">
+                                    <MudStack Row="true">
+                                        <MudIcon Icon="@Icons.Material.Filled.Class" Class="ml-2" Color="Color.Primary" />
+                                        <MudText>
+                                            @course.Name
+                                        </MudText>
+                                    </MudStack>
+                                </MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+                </MudStack>
+                <MudStack Row="true" Justify="@Justify.Center" AlignItems="@AlignItems.Center" StretchItems="@StretchItems.Middle">
+                    <MudIcon Icon="@Icons.Material.Filled.EditNote" Size="Size.Large" Color="Color.Default" Class="ma-3"></MudIcon>
+                    <MudTextField T="string" Label="Ismi" @bind-Value="newLead.Name" Required="true" />
+                </MudStack>
+                <MudStack Row="true" Justify="@Justify.Center" AlignItems="@AlignItems.Center" StretchItems="@StretchItems.Middle">
+                    <MudIcon Icon="@Icons.Material.Rounded.PermContactCalendar" Size="Size.Large" Color="Color.Secondary" Class="ma-3"></MudIcon>
+                    <MudSelect T="LeadSource" Label="Source" @bind-Value="newLead.Source" Required="true" Class="ma-3">
+                        @foreach (LeadSource column in Enum.GetValues(typeof(LeadSource)))
+                        {
+                            <MudSelectItem T="LeadSource" Value="column">
+                                <MudStack Row="true">
+                                    <MudIcon Icon="@GetIconForSource(column)" Class="ml-2" Color="Color.Primary" />
+                                    <MudText>
+                                        @column
+                                    </MudText>
+                                </MudStack>
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudStack>
+                <MudStack Row="true" Justify="@Justify.Center" AlignItems="@AlignItems.Center" StretchItems="@StretchItems.Middle">
+                    <MudIcon Icon="@Icons.Material.Filled.PhoneIphone" Size="Size.Large" Color="Color.Info" Class="ma-3"></MudIcon>
+                    <MudTextField T="string" Label="Phone Number" @bind-Value="newLead.Phone"  Required="true"/>
+                </MudStack>
+                <MudStack Row="true" Justify="@Justify.Center" AlignItems="@AlignItems.Center" StretchItems="@StretchItems.Middle">
+                    <MudIcon Icon="@Icons.Material.Filled.Home" Size="Size.Large" Color="Color.Warning" Class="ma-3"></MudIcon>
+                    <MudTextField T="string" Label="Manzili" @bind-Value="newLead.Address" />
+                </MudStack>
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Secondary" OnClick="Cancel">Bekor qilish</MudButton>
+        <MudButton Color="Color.Success" OnClick="AddLead">Qo'shish</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance mudDialog { get; set; } = default!;
+    [Inject] private ISnackbar snackbar { get; set; } = default!;
+    [Parameter] public EventCallback<Lead> OnAdd { get; set; }
+    private IEnumerable<Course>? courses;
+    private Lead newLead = new Lead();
+    private bool success;
+    private string[] errors = { };
+    private MudForm? form;
+    protected override async Task OnInitializedAsync()
+    {
+        courses = await courseService.GetCoursesAsync();
+    }
+
+    private async Task AddLead()
+    {
+        await form!.Validate();
+        if (form.IsValid)
+        {
+            newLead.CreatedAt = DateTime.Now;
+            await OnAdd.InvokeAsync(newLead);
+            snackbar.Add("Lead successfully created!", Severity.Success);
+            mudDialog.Close(DialogResult.Ok(newLead));
+        }
+        else
+        {
+            snackbar.Add("Ism, telefon raqam va qiziqayotgan kurs to'ldirilmagan!", Severity.Error);
+        }
+        StateHasChanged();
+    }
+
+    private void Cancel() => mudDialog.Cancel();
+
+    private string GetIconForSource(LeadSource source)
+    {
+        return source switch
+        {
+            LeadSource.Telegram => Icons.Custom.Brands.Telegram,
+            LeadSource.Instagram => Icons.Custom.Brands.Instagram,
+            LeadSource.Referral => Icons.Material.Rounded.PeopleAlt,
+            _ => Icons.Material.Filled.Help
+        };
+    }
+}
