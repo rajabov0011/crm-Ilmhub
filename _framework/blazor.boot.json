@@ -1,9 +1,9 @@
 {
   "mainAssemblyName": "crm-Ilmhub",
   "resources": {
-    "hash": "sha256-dQXl2Jo1G+OTpB+lBeA0z9R5EuHbcnYA8HXVJmLUTzA=",
+    "hash": "sha256-UnjivGO8KTRcDmBRuyYwDUcDEbUljyVR0vLPjOG65Oc=",
     "fingerprinting": {
-      "crm-Ilmhub.ebtc5ayhma.wasm": "crm-Ilmhub.wasm",
+      "crm-Ilmhub.au6xmvhon6.wasm": "crm-Ilmhub.wasm",
       "Microsoft.AspNetCore.Components.Forms.aqnxj8lz9n.wasm": "Microsoft.AspNetCore.Components.Forms.wasm",
       "Microsoft.AspNetCore.Components.towh6r16uf.wasm": "Microsoft.AspNetCore.Components.wasm",
       "Microsoft.AspNetCore.Components.Web.nr6ya62jjb.wasm": "Microsoft.AspNetCore.Components.Web.wasm",
@@ -74,7 +74,7 @@
       "System.Runtime.InteropServices.JavaScript.v6n6nxwok6.wasm": "sha256-51U1Jop+TFZlL27Bx6Je5B5J9n00+dyKolwuS3qVOUA="
     },
     "assembly": {
-      "crm-Ilmhub.ebtc5ayhma.wasm": "sha256-agyUbaCBHmAuaicpI4AelcMcV5+7nOBsXalwtcZfTiU=",
+      "crm-Ilmhub.au6xmvhon6.wasm": "sha256-4mIaqhxe64Qt4bdTzlt96M/9iNff2Ou8GlB6K0kvVB0=",
       "Microsoft.AspNetCore.Components.Forms.aqnxj8lz9n.wasm": "sha256-nua3TnWYafbhUbvJCzUuKOMACGB4LpfpDkiVv8Xkudc=",
       "Microsoft.AspNetCore.Components.towh6r16uf.wasm": "sha256-vWH0nAxUv4xWFtOSSAtMlE2hywSs1dTTz3Sb4ddEOls=",
       "Microsoft.AspNetCore.Components.Web.nr6ya62jjb.wasm": "sha256-w1h0Ro0hZw5bBnlHPYccWBnsJLJRTO92U4X03EN9ycY=",
