@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("crm-Ilmhub")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c794d00bf65031e89ce75375882df2e97853104b")]
 [assembly: System.Reflection.AssemblyProductAttribute("crm-Ilmhub")]
 [assembly: System.Reflection.AssemblyTitleAttribute("crm-Ilmhub")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
